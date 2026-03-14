@@ -7,7 +7,6 @@ setup(
     python_requires=">=3.10",
     packages=find_packages(),
     install_requires=[
-        "boto3>=1.26.0",
         "pandas>=1.5.0",
         "numpy>=1.23.0",
         "scikit-learn>=1.2.0",
