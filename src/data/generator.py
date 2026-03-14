@@ -62,6 +62,7 @@ def _inject_incidents(
     incident_rate: float,
     rng: np.random.Generator,
     freq_minutes: int,
+    pre_ramp_minutes: int = 10,
 ) -> np.ndarray:
     n_points = len(df)
     incident_flags = np.zeros(n_points, dtype=bool)
@@ -69,24 +70,27 @@ def _inject_incidents(
     min_gap = int(120 / freq_minutes)
     min_duration = int(10 / freq_minutes)
     max_duration = int(60 / freq_minutes)
+    pre_ramp_steps = int(pre_ramp_minutes / freq_minutes)
 
     i = min_gap
     while i < n_points - max_duration:
         if rng.random() < incident_rate * freq_minutes / 60:
             duration = rng.integers(min_duration, max_duration + 1)
             end = min(i + duration, n_points)
-
-            ramp = np.linspace(0, 1, min(int(duration * 0.3) + 1, duration))
-            plateau_len = end - i - len(ramp)
-
             severity = rng.uniform(0.5, 1.5)
 
-            for j in range(i, end):
-                if j - i < len(ramp):
-                    factor = ramp[j - i]
-                else:
-                    factor = 1.0
+            pre_start = max(0, i - pre_ramp_steps)
+            pre_ramp = np.linspace(0, 0.4, i - pre_start)
+            for k, j in enumerate(range(pre_start, i)):
+                f = pre_ramp[k]
+                df.loc[j, "cpu_utilization"] += f * severity * 30
+                df.loc[j, "request_latency"] *= 1 + f * severity * 1.5
+                df.loc[j, "error_rate"] += f * severity * 3
 
+            ramp_len = min(int(duration * 0.3) + 1, duration)
+            ramp = np.linspace(0.4, 1.0, ramp_len)
+            for j in range(i, end):
+                factor = ramp[j - i] if j - i < ramp_len else 1.0
                 df.loc[j, "cpu_utilization"] += factor * severity * rng.uniform(20, 50)
                 df.loc[j, "memory_usage"] += factor * severity * rng.uniform(15, 35)
                 df.loc[j, "request_latency"] *= 1 + factor * severity * rng.uniform(2, 8)

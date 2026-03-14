@@ -55,11 +55,14 @@ class TrainingPipeline:
         model = self._build_model()
         model.fit(train_features, train_targets)
 
+        default_threshold = self.config.get("alerting", {}).get("threshold", 0.65)
         test_scores = model.predict_proba(test_features)
         report = full_evaluation_report(
             y_true=test_targets,
             scores=test_scores,
             timestamps=test_features.index,
+            lookahead_minutes=lookahead,
+            default_threshold=default_threshold,
         )
 
         out = Path(artifacts_dir)

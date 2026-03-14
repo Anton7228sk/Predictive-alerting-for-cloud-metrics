@@ -98,10 +98,10 @@ def test_lead_time_positive(test_data):
 
 
 def test_lead_time_no_pre_alerts():
-    n = 50
-    y_true = pd.Series([False] * 20 + [True] * 10 + [False] * 20, dtype=bool)
+    n = 100
+    y_true = pd.Series([False] * 30 + [True] * 10 + [False] * 60, dtype=bool)
     scores = np.zeros(n)
-    scores[20:30] = 0.9
+    scores[70:80] = 0.9  # alerts fire well after the incident + lookahead window
     timestamps = pd.date_range("2024-01-01", periods=n, freq="1min")
     result = compute_lead_time(timestamps, y_true, scores, threshold=0.5)
     assert result["n_with_lead_time"] == 0

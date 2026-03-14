@@ -56,17 +56,29 @@ def compute_lead_time(
     y_true: pd.Series,
     scores: np.ndarray,
     threshold: float,
+    lookahead_minutes: int = 15,
+    max_lookback_minutes: int = 120,
 ) -> dict[str, Any]:
     intervals = _get_incident_intervals(y_true)
     alerts = scores >= threshold
     lead_times = []
 
     for start, end in intervals:
-        alert_indices = np.where(alerts[:start])[0]
+        # The target-positive interval starts H steps before the actual incident.
+        # So start + H approximates the actual incident start.
+        incident_start = min(start + lookahead_minutes, len(timestamps) - 1)
+
+        # Look for alerts in the pre-incident window [start, incident_start)
+        # and also in the extra lookback before it.
+        cutoff = timestamps[start] - pd.Timedelta(minutes=max_lookback_minutes)
+        search_from = int(np.searchsorted(timestamps, cutoff))
+
+        alert_indices = np.where(alerts[search_from:incident_start])[0]
         if len(alert_indices) == 0:
             continue
-        last_pre_alert_idx = alert_indices[-1]
-        lead_td = timestamps[start] - timestamps[last_pre_alert_idx]
+
+        first_alert_idx = search_from + alert_indices[0]
+        lead_td = timestamps[incident_start] - timestamps[first_alert_idx]
         lead_minutes = lead_td.total_seconds() / 60.0
         lead_times.append(lead_minutes)
 
@@ -130,6 +142,8 @@ def full_evaluation_report(
     scores: np.ndarray,
     timestamps: pd.DatetimeIndex,
     thresholds: list[float] | None = None,
+    lookahead_minutes: int = 15,
+    default_threshold: float = 0.65,
 ) -> dict[str, Any]:
     if thresholds is None:
         thresholds = [0.3, 0.4, 0.5, 0.6, 0.65, 0.7, 0.8]
@@ -150,7 +164,7 @@ def full_evaluation_report(
             "recall": compute_recall_at_threshold(y_true, scores, t),
             "precision": compute_precision_at_threshold(y_true, scores, t),
             "fpr": compute_false_positive_rate(y_true, scores, t),
-            "lead_time": compute_lead_time(timestamps, y_true, scores, t),
+            "lead_time": compute_lead_time(timestamps, y_true, scores, t, lookahead_minutes=lookahead_minutes),
         }
     report["threshold_metrics"] = threshold_metrics
 
@@ -160,7 +174,14 @@ def full_evaluation_report(
         "threshold": opt_threshold,
         "recall": opt_recall,
         "fpr": opt_fpr,
-        "lead_time": compute_lead_time(timestamps, y_true, scores, opt_threshold),
+        "lead_time": compute_lead_time(timestamps, y_true, scores, opt_threshold, lookahead_minutes=lookahead_minutes),
+    }
+
+    report["at_default_threshold"] = {
+        "threshold": default_threshold,
+        "recall": compute_recall_at_threshold(y_true, scores, default_threshold),
+        "fpr": compute_false_positive_rate(y_true, scores, default_threshold),
+        "lead_time": compute_lead_time(timestamps, y_true, scores, default_threshold, lookahead_minutes=lookahead_minutes),
     }
 
     n_incidents = len(_get_incident_intervals(y_true))
