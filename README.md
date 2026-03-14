@@ -52,8 +52,6 @@ Evaluated on an 18-day held-out test set (80/20 temporal split, 8 incidents, 90-
 
 Recall is measured at incident-interval level: an incident counts as detected only if at least one alert fires *before* its start. Lead time at threshold 0.70+ is reported as — because alerts fire at incident onset rather than in the pre-incident window.
 
-To reproduce: `python -c "from src.data.generator import generate_dataset; from src.training.pipeline import TrainingPipeline; import yaml; df = generate_dataset(n_days=90, seed=42); config = yaml.safe_load(open('config/config.yaml')); print(TrainingPipeline(config).run(df)['metrics']['at_default_threshold'])"`
-
 ---
 
 ## Project Structure
