@@ -75,22 +75,33 @@ def _time_features(index: pd.DatetimeIndex) -> pd.DataFrame:
 
 def create_features(
     df: pd.DataFrame,
+    window_size: int = 60,
     windows: list[int] = DEFAULT_WINDOWS,
     lags: list[int] = DEFAULT_LAGS,
     metric_cols: Optional[list[str]] = None,
 ) -> pd.DataFrame:
+    """Build a feature matrix from the previous `window_size` steps (W in the sliding-window formulation).
+
+    Each row represents the features derived from the W-step history ending at that timestamp.
+    These features are paired with a target that looks H steps ahead (see `create_targets`).
+    """
     if metric_cols is None:
         metric_cols = [c for c in METRIC_COLS if c in df.columns]
 
     if not metric_cols:
         raise ValueError("No metric columns found in DataFrame")
 
+    effective_windows = [w for w in windows if w <= window_size]
+    if not effective_windows:
+        effective_windows = [window_size]
+    effective_lags = [lag for lag in lags if lag <= window_size]
+
     parts = [
         df[metric_cols].copy(),
-        _rolling_features(df, metric_cols, windows),
-        _lag_features(df, metric_cols, lags),
+        _rolling_features(df, metric_cols, effective_windows),
+        _lag_features(df, metric_cols, effective_lags),
         _rate_of_change_features(df, metric_cols),
-        _percentile_features(df, metric_cols, window=max(windows)),
+        _percentile_features(df, metric_cols, window=window_size),
         _time_features(df.index),
     ]
 
@@ -112,13 +123,14 @@ def create_targets(
     if "incident" not in df.columns:
         raise ValueError("DataFrame must contain 'incident' column")
 
-    incident = df["incident"].astype(bool)
-    target = pd.Series(False, index=df.index, name="target")
-
-    for i in range(len(df) - lookahead_minutes):
-        if incident.iloc[i : i + lookahead_minutes + 1].any():
-            target.iloc[i] = True
-
+    incident = df["incident"].astype(bool).astype(int)
+    target = (
+        incident[::-1]
+        .rolling(window=lookahead_minutes + 1, min_periods=1)
+        .max()[::-1]
+        .astype(bool)
+    )
+    target.name = "target"
     return target
 
 

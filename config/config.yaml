@@ -15,6 +15,7 @@ data:
   lookback_days: 30
 
 features:
+  window_size: 60
   windows: [5, 15, 30, 60]
   lags: [1, 5, 15, 30]
   lookahead_minutes: 15

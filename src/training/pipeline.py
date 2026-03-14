@@ -67,11 +67,12 @@ class TrainingPipeline:
     def run(self, df: pd.DataFrame) -> dict[str, Any]:
         logger.info("Starting training pipeline with %d rows", len(df))
 
+        window_size = self._feature_config.get("window_size", 60)
         windows = self._feature_config.get("windows", [5, 15, 30, 60])
         lags = self._feature_config.get("lags", [1, 5, 15, 30])
         lookahead = self._feature_config.get("lookahead_minutes", 15)
 
-        features = create_features(df, windows=windows, lags=lags)
+        features = create_features(df, window_size=window_size, windows=windows, lags=lags)
         targets = create_targets(df.loc[features.index], lookahead_minutes=lookahead)
 
         aligned_features = features.loc[targets.index]

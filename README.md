@@ -78,6 +78,22 @@ Inference Pipeline (per-minute Lambda):
 
 ---
 
+## Problem Formulation
+
+The task is a binary classification problem with a sliding-window structure:
+
+> Given the previous **W** time steps of one or more metrics, predict whether an incident will occur within the next **H** time steps.
+
+Formally, for each timestamp *t*:
+- **Input**: metric values at steps *[t−W+1, …, t]* (plus features derived from this window)
+- **Target**: `1` if any incident occurs in *[t+1, …, t+H]*, else `0`
+
+Default configuration: **W = 60 minutes**, **H = 15 minutes** (set via `features.window_size` and `features.lookahead_minutes` in `config/config.yaml`).
+
+The sliding window advances one step at a time, generating one labeled sample per timestamp. This produces a supervised dataset from raw time-series data without data leakage — features at time *t* use only past observations, and the label uses only future ones.
+
+---
+
 ## Model Selection Rationale
 
 ### Why an Ensemble of IsolationForest + XGBoost?
