@@ -37,17 +37,22 @@ Features: rolling statistics, lag values, rate-of-change, percentile features (I
 
 ## Results
 
-Evaluated on an 18-day held-out test set (80/20 temporal split):
+Evaluated on an 18-day held-out test set (80/20 temporal split, 8 incidents, 90-day synthetic dataset):
 
-| Threshold | Recall | FPR  | Mean Lead Time |
-|-----------|--------|------|----------------|
-| 0.50      | ~0.92  | ~0.08 | ~12 min       |
-| **0.65**  | **~0.85** | **~0.04** | **~10 min** |
-| 0.70      | ~0.80  | ~0.02 | ~9 min        |
+| Threshold | Recall | FPR    | Mean Lead Time |
+|-----------|--------|--------|----------------|
+| 0.40      | 1.000  | 0.0062 | 5.5 min        |
+| 0.50      | 1.000  | 0.0005 | 5.2 min        |
+| 0.60      | 1.000  | 0.0000 | 4.8 min        |
+| **0.65**  | **1.000** | **0.0000** | **2.0 min** |
+| 0.70      | 1.000  | 0.0000 | —              |
+| 0.80      | 0.750  | 0.0000 | —              |
 
-**ROC-AUC: ~0.94**
+**ROC-AUC: 0.9499**
 
-Recall is measured at incident-interval level: an incident counts as detected only if at least one alert fires *before* its start.
+Recall is measured at incident-interval level: an incident counts as detected only if at least one alert fires *before* its start. Lead time at threshold 0.70+ is reported as — because alerts fire at incident onset rather than in the pre-incident window.
+
+To reproduce: `python -c "from src.data.generator import generate_dataset; from src.training.pipeline import TrainingPipeline; import yaml; df = generate_dataset(n_days=90, seed=42); config = yaml.safe_load(open('config/config.yaml')); print(TrainingPipeline(config).run(df)['metrics']['at_default_threshold'])"`
 
 ---
 
