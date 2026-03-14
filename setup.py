@@ -4,7 +4,6 @@ setup(
     name="predictive-alerting",
     version="0.1.0",
     description="Predictive alerting system for cloud metrics using ML anomaly detection",
-    author="JetBrains Internship",
     python_requires=">=3.10",
     packages=find_packages(),
     install_requires=[
@@ -21,11 +20,6 @@ setup(
             "matplotlib>=3.6.0",
             "seaborn>=0.12.0",
             "jupyter>=1.0.0",
-        ]
-    },
-    entry_points={
-        "console_scripts": [
-            "train-alerting=src.training.pipeline:main",
         ]
     },
 )

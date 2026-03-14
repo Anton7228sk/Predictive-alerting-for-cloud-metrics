@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=7.0.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+jupyter>=1.0.0
